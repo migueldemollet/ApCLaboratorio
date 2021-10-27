@@ -538,7 +538,7 @@ def polinomial_regressor(data: pd.DataFrame, grade: int) -> None:
 
 def main():
     # Apartado C
-    dataset, dataset_test = load_db('db\\Data_train_reduced.csv', 'db\\Data_train_reduced.csv')
+    dataset, dataset_test = load_db('db\\Data_train_reduced.csv', 'db\\test_data.csv')
     dataset_norm = copy.deepcopy(dataset)
     dataset_descent = copy.deepcopy(dataset)
 
