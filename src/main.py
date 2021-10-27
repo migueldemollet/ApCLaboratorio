@@ -5,6 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PolynomialFeatures
 
 import numpy as np
 from numpy import mean
@@ -224,7 +225,7 @@ def standardization(dataset: pd.DataFrame) -> None:
     dataset=dataset.apply(lambda x: (x-x.mean())/ x.std(), axis=0)
     dataset=(dataset - dataset.min()) / ( dataset.max() - dataset.min())
 
-def cleanData (dataDrop: pd.DataFrame) -> pd.DataFrame:
+def cleanData (dataDrop: pd.DataFrame) -> np.ndarray:
     """
     Función que elimina los atributos innecesarios por ejemplo Product.ID, Product, etc. para poder realizar la 
     regresión lineal múltiple.
@@ -236,7 +237,7 @@ def cleanData (dataDrop: pd.DataFrame) -> pd.DataFrame:
     
     Returns
     -----------
-    pd.DataFrame: Dataframe limpio
+    np.ndarray: Dataframe limpio
     """
     to_drop=['q1_1.personal.opinion.of.this.Deodorant','Respondent.ID','Product.ID','Product']
     dataDrop.drop(to_drop, inplace=True, axis=1)
@@ -490,6 +491,51 @@ def test_gradient_descent(X: np.ndarray, Y: np.ndarray) -> None:
         
     plt.show()
 
+def polinomial_regressor(data: pd.DataFrame, grade: int) -> None:
+    """
+    Funcion encargada de separar los datos de un dataset (recibido por parametro), en entreno y test en una proporcion de
+    80% entreno y 20% test, el cual se usara para realizar la regresion polinomial
+
+    Parametros
+    -----------
+    data: pd.DataFrame
+    dataset el cual se usara para realizar la regresion polinomial
+    
+    grade: int
+    grado del polinomio
+
+    Returns
+    -----------
+    Ninguno
+    """
+    X_p=data[:,np.newaxis,3]
+    y_p=data[:,4]
+    X_train_p,X_test_p,y_train_p,y_test_p=train_test_split(X_p,y_p, test_size=0.2)
+
+    poli_reg = PolynomialFeatures(degree=grade)
+
+    #Calculando los valores de X para cada una de las potencias 
+    X_train_poli=poli_reg.fit_transform(X_train_p)
+    X_test_poli=poli_reg.fit_transform(X_test_p)
+
+    #Definir el algoritmo
+    pr=linear_model.LinearRegression()
+
+    pr.fit(X_train_poli,y_train_p)
+    
+    #realizo
+    Y_pred_pr=pr.predict(X_test_poli)
+
+    plt.scatter(X_test_p,y_test_p)
+    plt.plot(X_test_p,Y_pred_pr,color='black',linewidth=3)
+    plt.title('Regresion Polinomial')
+    plt.xlabel('Gusto Instantaneo de desodorante')
+    plt.ylabel('Opinion personal de desodorante')
+    plt.show()
+
+    print('Precision del modelo:')
+    print(pr.score(X_train_poli,y_train_p))
+
 def main():
     # Apartado C
     dataset, dataset_test = load_db('db\\Data_train_reduced.csv', 'db\\Data_train_reduced.csv')
@@ -541,6 +587,9 @@ def main():
     show_gradient_descent(X, Y, Xgraf)
 
     test_gradient_descent(X, Y)
+
+    print("=========Regresion Polinomial=========")
+    polinomial_regressor(data, 2)
 
 if __name__ == '__main__':
     main()
