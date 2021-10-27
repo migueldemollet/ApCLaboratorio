@@ -431,10 +431,6 @@ def gradient_descent(X: np.ndarray ,y: np.ndarray ,learning_rate: float, iterati
         # Actualizando ultimos valores
         b = b - (learning_rate * b_gradient)
         m = m - (learning_rate * m_gradient)
-
-        # Actualizando valores previos
-        b = b - (learning_rate * b_gradient)
-        m = m - (learning_rate * m_gradient)
     return m*X + b,b,m
 
 def show_gradient_descent(X: np.ndarray, Y: np.ndarray, Xgraf: float) -> None:
