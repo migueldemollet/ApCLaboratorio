@@ -16,6 +16,23 @@ import matplotlib.pyplot as plt
 import copy
 
 def load_db(dir_db: str, dir_test_db: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Esta función se encarga de leer los ficheros csv y transformarlo en variables de tipo pd.DataFrame gracias a la ayuda 
+    de la librería de pandas
+    
+    Parámetros
+    -----------
+    Dir_db: str
+    String que indica el directorio de la base de datos para el entreno del modelo
+    
+    Dir_test_db: str
+    String que indica el directorio de la base de datos para el test del modelo
+    
+    Returns
+    -----------
+    pd.DataFrame: dataframe del directorio de entreno
+    pd.DataFrame: dataframe del directorio de test
+    """
     # Visualitzarem només 3 decimals per mostra
     pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
@@ -25,18 +42,55 @@ def load_db(dir_db: str, dir_test_db: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     return dataset, dataset_test
 
 def columns_with_na(dframe: pd.DataFrame) -> int:
+    """
+    Función encargada de buscar los índices de las columnas que tengan algún valor nulo dentro del dataframe
+    
+    Parámetros
+    -----------
+    dframe: pd.DataFrame
+    dataframe al que buscaremos los valores nulos
+    
+    Returns
+    -----------
+    Int: índices de las columnas nulas
+    """
     temp = dframe.isna().sum()
     temp = temp[temp >0]
 
     return temp.index
 
 def prepare_data(dataset: pd.DataFrame) -> None:
+    """
+    Esta función es la encargada de preparar el dataset para su análisis, así como limpiar los valores nulos 
+    usando la ayuda de la función columns_with_na y mostrando de forma gráfica una vez limpiada
+    
+    Parámetros
+    -----------
+    dataset: pd.DataFrame 
+    dataset “sucio”
+    
+    Returns
+    -----------
+    Ninguno
+    """
     if (dataset.isnull().sum().any() > 0):
         columns_to_drop = list(columns_with_na(dataset))
         dataset.drop(columns_to_drop, axis=1, inplace = True)
         sns.heatmap(dataset.isnull(), cbar=False)
 
 def dataset_statistics(dataset: pd.DataFrame) -> None:
+    """
+    Esta función es vital para nuestro análisis de los datos ya que es la encargada de mostrar datos estadísticos como por ejemplo características del dataset, las 5 primeras filas de este, etc. Y los pintamos por terminal
+    
+    Parámetros
+    -----------
+    dataset: pd.DataFrame
+    dataset que queremos explorer
+    
+    Returns
+    -----------
+    Ninguno
+    """
     print("=========Descripcion=========")
     print(dataset.describe(), end="\n")
 
@@ -51,6 +105,19 @@ def dataset_statistics(dataset: pd.DataFrame) -> None:
     print("Total = ", len(dataset), end="\n")
 
 def dataset_graphics(dataset: pd.DataFrame) -> None:
+    """
+    Funcion similar a la anteriormente nombrada, pero en este caso realiza gráficos sobre la media, 
+    correlación entre las variables e histogramas de los atributos
+    
+    Paraemtros
+    -----------
+    dataset: pd.DataFrame
+    dataset que queremos explorer
+    
+    Returns
+    -----------
+    Ninguno
+    """
     #Media
     dataset['mean']=(dataset.mean(axis=1)/(dataset.shape[1]-3))
     plt.figure()
@@ -70,12 +137,58 @@ def dataset_graphics(dataset: pd.DataFrame) -> None:
     plt.show()
 
 def split_data(dataset: pd.DataFrame, dataset_test: pd.DataFrame, objective: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Esta función la usamos para separar los datos de entreno con los datos de test en una proporción de 80% entreno y 20% de test
+    
+    Parámetros
+    -----------
+    dataset: pd.DataFrame
+    dataset del cual se establrecera una X y una Y de entreno
+    
+    dataset: pd.DataFrame
+    dataset del cual se establecerá una X y una Y de test
+    
+    objective: str
+    string el cual elige el atributo objetivo a predecir
+    
+    Returns
+    -----------
+    np.ndarray: numpy array en que su contenido se encuentra la X de entreno
+    np.ndarray: numpy array en que su contenido se encuentra la X de test
+    np.ndarray: numpy array en que su contenido se encuentra la Y de entreno
+    np.ndarray: numpy array en que su contenido se encuentra la Y de test
+    """
     X_train=dataset.values[:,np.newaxis,3]
     y_train=dataset[objective]
 
     return train_test_split(X_train,y_train,test_size=0.2,random_state=15)
 
 def regresion_lineal(X_train: list , X_test: list , y_train: list ,y_test:list, x_label: str) -> None:
+    """
+    Función encargada de crear y entrenar un modelo con una regresión lineal, y su graficacion es decir graficar 
+    los datos junto al modelo 
+    
+    Parámetros
+    -----------
+    X_train: list
+    Listas de los datos el cual el modelo usara para entrenar
+    
+    X_test: list
+    Listas de los datos el cual el modelo usara para testear
+    
+    y_train: list
+    Listas de los datos el cual el modelo debe de predecir según los datos de entrada (X_train)
+    
+    y_test:list
+    Listas de los datos el cual el modelo debe de predecir según los datos de entrada (X_test)
+    
+    x_label: str
+    String que se usa como titulo del eje x de la grafica
+    
+    Returns
+    -----------
+    Ninguno
+    """
     lr = linear_model.LinearRegression()
     lr.fit(X_train, y_train)
     Y_pred = lr.predict(X_test)
@@ -92,6 +205,19 @@ def regresion_lineal(X_train: list , X_test: list , y_train: list ,y_test:list, 
     print("R2 Score: ", lr.score(X_train, y_train))
 
 def standardization(dataset: pd.DataFrame) -> None:
+    """
+    Función que normaliza con el método de la medida un dataframe y elimina los atributos 
+    necesarios para la normalizacion
+    
+    Parámetros
+    -----------
+    dataset: pd.dataframe
+    dataframe a normalizar
+    
+    Returns
+    -----------
+    Ninguno
+    """
     to_drop=['Respondent.ID','Product.ID','Product']
     dataset.drop(to_drop, axis=1, inplace = True)
 
@@ -99,12 +225,41 @@ def standardization(dataset: pd.DataFrame) -> None:
     dataset=(dataset - dataset.min()) / ( dataset.max() - dataset.min())
 
 def cleanData (dataDrop: pd.DataFrame) -> pd.DataFrame:
+    """
+    Función que elimina los atributos innecesarios por ejemplo Product.ID, Product, etc. para poder realizar la 
+    regresión lineal múltiple.
+    
+    Parámetros
+    -----------
+    dataDrop: pd.DataFrame
+    dataframe que queremos limpiar
+    
+    Returns
+    -----------
+    pd.DataFrame: Dataframe limpio
+    """
     to_drop=['q1_1.personal.opinion.of.this.Deodorant','Respondent.ID','Product.ID','Product']
     dataDrop.drop(to_drop, inplace=True, axis=1)
 
     return dataDrop.values
 
 def regresion_multiple(X_multiple: np.ndarray ,y_multiple: np.ndarray) -> None:
+    """
+    Función encargada de separar los datos de entreno y los de test, crear y entrenar un modelo con una regresión 
+    lineal multiple, y mostrar por terminal su precisión de predicción
+    
+    Parámetros
+    -----------
+    X_multiple: np.ndarray
+    Atributos que se usaran para predecir
+    
+    y_multiple: np.ndarray
+    Atributos a predecir
+    
+    Returns
+    -----------
+    Ninguno
+    """
     X_train, X_test, y_train, y_test = train_test_split(X_multiple,y_multiple, test_size=0.2)
     
     lr_multiple = linear_model.LinearRegression()
@@ -123,6 +278,29 @@ def regresion_multiple(X_multiple: np.ndarray ,y_multiple: np.ndarray) -> None:
     print(lr_multiple.score(X_train,y_train), end="\n")
 
 def apply_pca(dataset: pd.DataFrame, X_train: np.ndarray, y_train: np.ndarray, components: int) -> tuple[PCA, np.ndarray]:
+    """
+    Funcion que se encarga de aplicar el PCA (análisis de componentes principales) y printar por terminal métricas de rendimiento y 
+    resultado del nuevo dataset como por ejemplo el MSE, cross validation, etc.
+    
+    Parámetros
+    -----------
+    dataset: pd.DataFrame
+    dataset el cual le aplicaremos el PCA
+    
+    X_train: np.ndarray
+    Atributos de entrada que usaremos para la el cross validation y MSE
+    
+    y_train: np.ndarray
+    Atributos de salida que usaremos para la el cross validation y MSE
+    
+    components: int
+    dimensión a la que queremos reducir
+    
+    Returns
+    -----------
+    PCA: Matriz que contiene los datos del dataset reducido a la dimensión indicada
+    np.ndarray: Matriz del PCA transpuesta
+    """
     X = dataset.values.T
     plt.scatter(X[:, 0], X[:, 1])
     plt.axis('equal')
@@ -145,13 +323,47 @@ def apply_pca(dataset: pd.DataFrame, X_train: np.ndarray, y_train: np.ndarray, c
     return pca, X_pca
 
 def show_pca(pca: PCA, X_pca, dataset: pd.DataFrame) -> None:
+    """
+    Esta funcion muestra de forma grafica lo que el PCA hace a un dataset
+    
+    Parámetros
+    -----------
+    pca: PCA
+    Matriz resultante de la funcion apply_pca
+    
+    X_pca
+    Matriz PCA transpuesta
+    
+    dataset: pd.DataFrame
+    dataset original sin reducer
+    
+    Returns
+    -----------
+    Ninguno
+    """
     X_new = pca.inverse_transform(X_pca)
     plt.scatter(dataset.values[:, 0], dataset.values[:, 1], alpha=0.2)
     plt.scatter(X_new[:, 0], X_new[:, 1], alpha=0.8)
     plt.axis('equal')
     plt.show()
 
-def variance(dataset, y_multiple) -> None:
+def variance(dataset: pd.DataFrame, y_multiple: np.ndarray) -> None:
+    """
+    Función que grafica la varianza individual y acumulada de las variables y a mas vuelve a setear los valores 
+    de personal opinión que fueron anteriormente eliminados
+    
+    Parámetros
+    -----------
+    dataset: pd.DataFrame
+    dataframe el cual usaremos sus atributos para calcular la varianza
+    
+    y_multiple: np.ndarray
+    valores del atributo personal opinión
+    
+    Returns
+    -----------
+    Ninguno
+    """
     # Vuelvo añadir la columna 'q1_1.personal.opinion.of.this.Deodorant'
     dataset['q1_1.personal.opinion.of.this.Deodorant'] = y_multiple
     X_std = dataset.values[:,0:53]
@@ -184,6 +396,29 @@ def variance(dataset, y_multiple) -> None:
 
 
 def gradient_descent(X: np.ndarray ,y: np.ndarray ,learning_rate: float, iterations: int) -> tuple[float, float, float]:
+    """
+    Función que aplica nuestra versión del descenso del gradiante
+    
+    Parámetros
+    ----------
+    X: np.ndarray
+    Parametros de entrada
+    
+    y: np.ndarray
+    parametros de salida
+    
+    learning_rate: float
+    learning rate
+    
+    iterations: int
+    variable que indica las iteraciones del descenso de gradiante
+    
+    Returns
+    -----------
+    float: resultado de la formula de la recta m*x + b
+    float: parámetro b de la fórmula de la recta
+    float: parámetro m de la fórmula de la recta
+    """
     b = 0
     m = 5
     n = X.shape[0]
@@ -202,6 +437,24 @@ def gradient_descent(X: np.ndarray ,y: np.ndarray ,learning_rate: float, iterati
     return m*X + b,b,m
 
 def show_gradient_descent(X: np.ndarray, Y: np.ndarray, Xgraf: float) -> None:
+    """
+    funcion que grafica que el modelo resultante al aplicar el descenso de gradiante
+    
+    Parámetros
+    -----------
+    X: np.ndarray
+    Datos para la gráfica en eje x
+    
+    Y: np.ndarray
+    Datos para la gráfica en eje y
+    
+    Xgraf: float
+    Formula de la recta resultante de aplicar el descenso de gradiante
+    
+    Returns
+    -----------
+    Ninguno
+    """
     plt.style.use('fivethirtyeight')
     plt.scatter(X, Y, color='black')
     plt.plot(X,Xgraf)
@@ -209,6 +462,21 @@ def show_gradient_descent(X: np.ndarray, Y: np.ndarray, Xgraf: float) -> None:
     plt.show()
 
 def test_gradient_descent(X: np.ndarray, Y: np.ndarray) -> None:
+    """
+    función que realiza varias veces el descenso de gradiante para poder probar como se comporta delante varios aprendizajes
+    
+    Parámetros
+    -----------
+    X: np.ndarray
+    Parametros de entrada
+    
+    Y: np.ndarray
+    Parametros de salida
+    
+    Returns
+    -----------
+    Ninguno
+    """
     learnig=[0.1,0.2,0.001]
     iterations=[1000,2000]
     for i in learnig:
