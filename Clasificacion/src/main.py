@@ -2,20 +2,20 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
-from sklearn import svm, datasets, ensemble
-from sklearn.model_selection import train_test_split
-from numpy import mean
-from numpy import std
+from sklearn import svm, ensemble,metrics
+from sklearn.model_selection import train_test_split, GridSearchCV,RandomizedSearchCV,KFold, StratifiedKFold, cross_val_score,LeaveOneOut
+from numpy import mean,std
 import seaborn as sns
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, accuracy_score,precision_score, recall_score, f1_score, accuracy_score,roc_curve,classification_report
+from sklearn.metrics import confusion_matrix, accuracy_score,precision_score, recall_score, f1_score, accuracy_score,roc_curve,classification_report,auc
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.svm import SVC, LinearSVC
+from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score,LeaveOneOut
-from sklearn.metrics import f1_score, precision_recall_curve, average_precision_score, roc_curve, auc
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
 import copy
+import warnings
+warnings.filterwarnings('ignore')
 
 def load_db(dir_db: str) -> pd.DataFrame:
     """
@@ -64,76 +64,129 @@ def split_data(X, Y, train_size: float) -> tuple[np.ndarray, np.ndarray, np.ndar
     """
     return train_test_split(X, Y, train_size=train_size)
 
-def logistic_regression(X, y) -> LogisticRegression:
-    """
-    Esta función se encarga de entrenar el modelo logistico
+def logistic_regression(X_train, X_test, y_train, y_test):
+    regresion_logistica= LogisticRegression()
+    tuned_parameters = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000] ,'penalty':['l1','l2']}
+    regresion_logistica= GridSearchCV(regresion_logistica, tuned_parameters,cv=10)
+    regresion_logistica.fit(X_train, y_train)
+
+    y_prob = regresion_logistica.predict_proba(X_test)[:,1]  
+    y_pred = np.where(y_prob > 0.5, 1, 0) 
+    print(f'Score: ', regresion_logistica.score(X_test, y_pred))
+
+    #generating roc_curve
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_prob)
+    roc_auc = auc(false_positive_rate, true_positive_rate)
+    plt.figure(figsize=(8,8))
+    plt.title('Curva de ROC Regression lineal')
+    plt.plot(false_positive_rate,true_positive_rate, color='red',label = 'AUC = %0.2f' % roc_auc)
+    plt.legend(loc = 'lower right')
+    plt.plot([0, 1], [0, 1],linestyle='--')
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    plt.show()
+
+def svm_model(X_train, X_test, y_train, y_test):
+    tuned_parameters = {
+        'C': [1, 10, 100,500, 1000], 'kernel': ['linear','rbf'],
+        'C': [1, 10, 100,500, 1000], 'gamma': [1,0.1,0.01,0.001, 0.0001], 'kernel': ['rbf']
+    }
+    svm_model=SVC()
+    model_svm = RandomizedSearchCV(svm_model, tuned_parameters,cv=10,scoring='accuracy',n_iter=30)
+    model_svm.fit(X_train, y_train)
+    y_pred= model_svm.predict(X_test)
+    print(f'Score: ', model_svm.score(X_test, y_pred))
+
+    #generating roc_curve
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_pred)
+    roc_auc = auc(false_positive_rate, true_positive_rate)
+    plt.figure(figsize=(8,8))
+    plt.title('Curva de ROC SVM')
+    plt.plot(false_positive_rate,true_positive_rate, color='red',label = 'AUC = %0.2f' % roc_auc)
+    plt.plot([0, 1], [0, 1],linestyle='--')
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    plt.show()
+
+
+def random_forest(X_train, X_test, y_train, y_test):
+    clf = RandomForestClassifier(n_estimators=300,min_samples_leaf=0.15)
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    print(f'Score: ', clf.score(X_test, y_pred))
+
+    #generating roc_curve
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_pred)
+    roc_auc = auc(false_positive_rate, true_positive_rate)
+    plt.figure(figsize=(8,8))
+    plt.title('Curva de ROC Random Forest')
+    plt.plot(false_positive_rate,true_positive_rate, color='red',label = 'AUC = %0.2f' % roc_auc)
+    plt.plot([0, 1], [0, 1],linestyle='--')
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    plt.show()
+
+def compare_models_by_precision(X_train, y_train):
+    modelos_test = [SVC(kernel='linear',C =100),
+          RandomForestClassifier(n_estimators=300,random_state=40),
+          KNeighborsClassifier(), 
+          LogisticRegression(max_iter=1000,solver='lbfgs'),
+          DecisionTreeClassifier(),
+          GaussianNB(),]
+
+    modelos = ['SVC', 'Random Forest','KNN',  'Regresion Logistica','DecisionTreeClassifier','GaussianNB']
+    scores_unscaled = []
+    for index,model in enumerate(modelos_test):
+        try:
+            model.fit(X_train,y_train)
+            print("Precision =",modelos[index] ,":",round(model.score(X_train,y_train)*100,2),"%")
+            scores_unscaled.append(round(model.score(X_train,y_train)*100,2))
+        except:
+            print("Skipped",modelos[index])
     
-    Parámetros
-    -----------
-    X: np.ndarray
-    Matriz de datos de entrada
+    #mostrando grafica de los modelos
+    plt.plot(range(len(modelos)),scores_unscaled, '-o')
+    plt.xticks(range(0,6,1),labels = modelos, rotation = 90)
+    plt.grid(visible=True)
+    plt.show()
 
-    Y: np.ndarray
-    Matriz de datos de salida
+def compare_models(dataset):
+    # Take the first 5 features. We could avoid this by using a two-dim dataset
+    X =  dataset[['thalachh','cp']].values
+    #X =  dataset[['thalach','cp','slp','exng','oldpeak','caa','thall']].values
+    #X =  dataset[['thalachh','cp','slp','exng','oldpeak']].values
+    y = dataset['output']
 
-    Returns
-    -----------
-    logireg: LogisticRegression
-    Regresor logistico
-    """
-    #Creacion del regresor logistico 
-    logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
+    n_classes = 2
+        
+    fig, sub = plt.subplots(1, 2, figsize=(16,6))
+    sub[0].scatter(X[:,0], y, c=y, cmap=plt.cm.coolwarm, edgecolors='k')
+    sub[1].scatter(X[:,1], y, c=y, cmap=plt.cm.coolwarm, edgecolors='k')
 
-    # Entrenamiento
-    logireg.fit(X, y)
 
-    return logireg
-
-def svm_regression(X, y) -> SVC:
-    """
-    Esta función se encarga de entrenar el modelo SVM
-    
-    Parámetros
-    -----------
-    X: np.ndarray
-    Matriz de datos de entrada
-
-    y: np.ndarray
-    Matriz de datos de salida
-
-    Returns
-    -----------
-    svc: SVC
-    Regresor SVM
-    """
-    #Creacion del regresor SVM
-    svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
-
-    # Entrenamiento 
-    svc.fit(X, y)
-
-    return svc
-
-def compare_models(X, y):
-    """
-    Esta función se encarga de comparar los modelos entrenados
-    """
     particions = [0.5, 0.7, 0.8]
 
     for part in particions:
-        #Separamos los datos de entrenamiento y prueba
-        X_train, X_test, y_train, y_test = split_data(X, y, part)
+        x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=part)
+        
+        #Creacion del regresor logistico 
+        logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
 
-        #Entrenamos el modelo logistico
-        logireg = logistic_regression(X_train, y_train)
-        print ("Correct classification Logistic: ", part, "% of the data: ", logireg.score(X_test, y_test))
+        # Entrenamiento
+        logireg.fit(x_t, y_t)
 
-        #Entrenamos el modelo SVM
-        svc = svm_regression(X_train, y_train)
-        probs = svc.predict_proba(X_test)
-        print ("Correct classification SVM: ", part, "% of the data: ", svc.score(X_test, y_test))
+        print ("Correct classification Logistic ", part, "% of the data: ", logireg.score(x_v, y_v))
+        
+        #Utilizacion de máquinas de vectores de soporte
+        svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
 
-    return probs, y_test
+        # Entrenamiento 
+        svc.fit(x_t, y_t)
+        probs = svc.predict_proba(x_v)
+        print ("Correct classification SVM      ", part, "% of the data: ", svc.score(x_v, y_v))
+
+    plt.show()
+
 
 def generate_precision_recall(X, y, n_classes: int, probs: np.array, y_v):
 
@@ -393,7 +446,6 @@ def dataset_graphics(dataset: pd.DataFrame) -> None:
     sns.heatmap(correlacion,annot=True,cmap="coolwarm")
     plt.show()
 
-
 def dataset_atipic_values(dataset):
     fig, ax = plt.subplots(ncols = 7, nrows = 2, figsize = (20, 10))
     index = 0
@@ -460,6 +512,81 @@ def train_model(model, X_train, X_test, y_train, y_test, model_name):
     plt.show()
     return model, valor, y_pred
 
+def statics_model_regression_logistic(X_train, X_test, y_train, y_test):
+    modelos_rl = pd.DataFrame(columns=["Modelo","Precision","C","fit_intercept","penalty","tol"])
+    c_list=[0.001,0.01,0.1,1.0,2.0]
+    f_inter=[False,True]
+    for i in c_list:
+        for j in f_inter:
+            #Modelo
+            modelo=LogisticRegression(C=i,fit_intercept=j, penalty='l2',tol=0.001)
+            #Entrenamiento del modelo
+            modelo.fit(X_train,y_train)
+            #Prediccion en base al training test
+            prediccion=modelo.predict(X_test)
+            #Accuracy obtenido
+            acc=accuracy_score(y_test,prediccion)
+            valor2={"Modelo":"Regresion Logistica","Precision":acc,"C":i,"fit_intercept":j,"penalty":"l2","tol":0.001}
+            modelos_rl =modelos_rl .append(valor2,ignore_index=True)
+    
+    print(modelos_rl.sort_values(by="Precision", ascending=False))
+
+def statics_model_smv(X_train, X_test, y_train, y_test, kernel):
+    modelos_svm =pd.DataFrame(columns=["Modelo","Precision","C","probability","gamma","tol"])
+    c_list=[0.001,0.01,0.1,1.0,2.0]
+    gammas=['scale','auto']
+    for i in c_list:
+        for j in gammas:
+            #Modelo
+            modelo_svm = SVC(C=i,kernel=kernel,tol=0.001,probability=True)
+            #Entrenamiento del modelo
+            modelo_svm.fit(X_train,y_train)
+            #Prediccion en base al training test
+            prediccion_svg=modelo_svm.predict(X_test)
+            #Accuracy obtenido
+            acc_svg=accuracy_score(y_test,prediccion_svg)
+            valor2={"Modelo":"SVG_rbf","Precision":acc_svg,"C":i,"probability":'True','gamma':j,"tol":0.001}
+            modelos_svm = modelos_svm.append(valor2,ignore_index=True)
+    
+    print(modelos_svm.sort_values(by="Precision", ascending=False))
+
+def statics_model_random_forest(X_train, X_test, y_train, y_test):
+    modelos_rf=pd.DataFrame(columns=["Modelo","Precision","n_estimators","min_samples_leaf"])
+    estimadores=[100,200,300,500]
+    min_samples=[0.1,0.15,0.2,0.25,0.3]
+    for i in estimadores:
+        for j in min_samples:
+            #Modelo
+            modelo_rf = RandomForestClassifier(n_estimators=i,min_samples_leaf=j)
+            #Entrenamiento del modelo
+            modelo_rf.fit(X_train,y_train)
+            #Prediccion en base al training test
+            prediccion_rf=modelo_rf.predict(X_test)
+            #Accuracy obtenido
+            acc_rf=accuracy_score(y_test,prediccion_rf)
+            valor={"Modelo":"Random Forest","Precision":acc_rf,"n_estimators":i,"min_samples_leaf":j}
+            modelos_rf=modelos_rf.append(valor,ignore_index=True)
+    
+    print(modelos_rf.sort_values(by="Precision", ascending=False))
+
+def statics_model_knn(X_train, X_test, y_train, y_test):
+    modelos_knn=pd.DataFrame(columns=["Modelo","Precision","n"])
+    n=[10,15,20,30,50]
+    for i in n:
+        #Modelo
+        knn =  KNeighborsClassifier(n_neighbors=i)
+        #Entrenamiento del modelo
+        knn.fit(X_train, y_train)
+        #Prediccion en base al training test
+        prediccion_knn=knn.predict(X_test)
+        #Accuracy obtenido
+        acc_knn=accuracy_score(y_test,prediccion_knn)
+        
+        valor={"Modelo":"Knn","Precision":acc_knn,"n":i}
+        modelos_knn=modelos_knn.append(valor,ignore_index=True)
+    
+    print(modelos_knn.sort_values(by="Precision", ascending=False))
+
 def k_split(X, y):
     #Usemos cross_val_score para evaluar una puntuación mediante validación cruzada.
     kf =KFold(n_splits=5, shuffle=True, random_state=42)
@@ -522,13 +649,23 @@ def main():
 
     #Cargamos la base de datos
     dataset = load_db('db\\heart.csv')
-    #comparamos modelos
-    X =  dataset[['thalachh','cp']].values
-    y = dataset['output']
+    #entrenando modelo para comparativa
+    print("=========Entrenando modelos para la comparativa=========")
+    X = dataset.drop('output', axis=1)
+    y=dataset['output']
+    X_train, X_test, y_train, y_test = split_data(X, y, 0.5)
+    print("=========Regression logistica=========")
+    logistic_regression(X_train, X_test, y_train, y_test)
+    print("=========SVM=========")
+    svm_model(X_train, X_test, y_train, y_test)
+    print("=========Random Forest=========")
+    random_forest(X_train, X_test, y_train, y_test)
 
-    prob, y_v = compare_models(X, y)
-    generate_precision_recall(X,y, 2, prob, y_v)
-    generate_roc_curve(2, prob, y_v)
+    #comparativa de modelos
+    print("=========Comparativa de modelos por precision=========")
+    compare_models_by_precision(X_train, y_train)
+    print("=========Comparativa de modelos por score=========")
+    compare_models(dataset)
     #mIRAR fUNCIONES QUE LUIS NO ESTA USANDO, ESTA EL CODIGO AQUI
 
     # Apartado A
@@ -564,31 +701,37 @@ def main():
     model_lr = LogisticRegression(max_iter=200,random_state=0,n_jobs=30)
     model_lr, valor, y_pred_lr = train_model(model_lr, X_train, X_test, y_train, y_test, "Logistic Regression")
     modelos = modelos.append(valor, ignore_index=True)
+    statics_model_regression_logistic(X_train,X_test,y_train, y_test)
 
     print("=========Regression SVC(rbf)=========")
     model_svc = SVC(kernel='rbf', random_state = 42)
     model_svc, valor, y_pred_svc = train_model(model_svc, X_train, X_test, y_train, y_test, "SVC(rbf)")
     modelos = modelos.append(valor, ignore_index=True)
+    statics_model_smv(X_train,X_test,y_train, y_test, 'rbf')
 
     print("=========Regression SVC(linear)=========")
     model_svc2 = SVC(kernel='linear', random_state = 42)
     model_svc2, valor, y_pred_svc2 = train_model(model_svc2, X_train, X_test, y_train, y_test, "SVC(linear)")
     modelos = modelos.append(valor, ignore_index=True)
+    statics_model_smv(X_train,X_test,y_train, y_test, 'linear')
 
     print("=========Regression SVC(poly)=========")
     model_svc3 = SVC(kernel='poly', random_state = 42)
     model_svc3, valor, y_pred_svc3 = train_model(model_svc3, X_train, X_test, y_train, y_test, "SVC(poly)")
     modelos = modelos.append(valor, ignore_index=True)
+    statics_model_smv(X_train,X_test,y_train, y_test, 'poly')
 
     print("=========Random forest=========")
     model_rf = RandomForestClassifier(n_estimators=300,min_samples_leaf=0.16, random_state=42)
     model_rf, valor, y_pred_rf = train_model(model_rf, X_train, X_test, y_train, y_test, "Random forest")
     modelos = modelos.append(valor, ignore_index=True)
+    statics_model_random_forest(X_train,X_test,y_train, y_test)
 
     print("=========KNN=========")
     model_knn = KNeighborsClassifier(n_neighbors=17)
     model_knn, valor, y_pred_knn = train_model(model_knn, X_train, X_test, y_train, y_test, "KNN")
     modelos = modelos.append(valor, ignore_index=True)
+    statics_model_knn(X_train,X_test,y_train, y_test)
 
     print("=========Mejores modelos by Precision=========")
     print(modelos.sort_values(by="Precision", ascending=False))
