@@ -1,12 +1,12 @@
+from typing import Any
+import seaborn as sns
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
-from sklearn import svm, ensemble,metrics
-from sklearn.model_selection import train_test_split, GridSearchCV,RandomizedSearchCV,KFold, StratifiedKFold, cross_val_score,LeaveOneOut
-from numpy import mean,std
-import seaborn as sns
-from sklearn.metrics import confusion_matrix, accuracy_score,precision_score, recall_score, f1_score, accuracy_score,roc_curve,classification_report,auc
+from sklearn import svm, ensemble
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, KFold, cross_val_score, LeaveOneOut
+from sklearn.metrics import confusion_matrix, accuracy_score,precision_score, recall_score, f1_score, accuracy_score, roc_curve, classification_report, auc
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
@@ -40,7 +40,7 @@ def load_db(dir_db: str) -> pd.DataFrame:
     
     return dataset
 
-def split_data(X, Y, train_size: float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def split_data(X: np.ndarray, Y: np.ndarray, train_size: float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Esta función se encarga de dividir los datos de entrenamiento y prueba de la base de datos
     
@@ -57,14 +57,35 @@ def split_data(X, Y, train_size: float) -> tuple[np.ndarray, np.ndarray, np.ndar
 
     Returns
     -----------
-    X_train: pd.DataFrame
-    Dataset de entrenamiento
-    X_test: pd.DataFrame
-    Dataset de prueba
+    pd.DataFrame: Dataset de entrenamiento
+    pd.DataFrame: Dataset de prueba
+    pd.DataFrame: Dataset de salida de entrenamiento
+    pd.DataFrame: Dataset de salida de prueba
     """
     return train_test_split(X, Y, train_size=train_size)
 
-def logistic_regression(X_train, X_test, y_train, y_test):
+def logistic_regression(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame) -> None:
+    """
+    Esta función es la encargada de entrenar el modelo logistico y evaluarlo con los datos de prueba
+
+    Parámetros
+    -----------
+    X_train: pd.DataFrame
+    Dataset de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset de prueba
+
+    y_train: pd.DataFrame
+    Dataset de salida de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset de salida de prueba
+
+    Returns
+    -----------
+    Ninguno
+    """
     regresion_logistica= LogisticRegression()
     tuned_parameters = {'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000] ,'penalty':['l1','l2']}
     regresion_logistica= GridSearchCV(regresion_logistica, tuned_parameters,cv=10)
@@ -86,7 +107,28 @@ def logistic_regression(X_train, X_test, y_train, y_test):
     plt.xlabel('False Positive Rate')
     plt.show()
 
-def svm_model(X_train, X_test, y_train, y_test):
+def svm_model(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame) -> None:
+    """
+    Esta función es la encargada de entrenar el modelo SVM y evaluarlo con los datos de prueba
+
+    Parámetros
+    -----------
+    X_train: pd.DataFrame
+    Dataset de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset de prueba
+
+    y_train: pd.DataFrame
+    Dataset de salida de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset de salida de prueba
+
+    Returns
+    -----------
+    Ninguno
+    """
     tuned_parameters = {
         'C': [1, 10, 100,500, 1000], 'kernel': ['linear','rbf'],
         'C': [1, 10, 100,500, 1000], 'gamma': [1,0.1,0.01,0.001, 0.0001], 'kernel': ['rbf']
@@ -109,7 +151,28 @@ def svm_model(X_train, X_test, y_train, y_test):
     plt.show()
 
 
-def random_forest(X_train, X_test, y_train, y_test):
+def random_forest(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame) -> None:
+    """
+    Esta función es la encargada de entrenar el modelo Random Forest y evaluarlo con los datos de prueba
+
+    Parámetros
+    -----------
+    X_train: pd.DataFrame
+    Dataset de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset de prueba
+
+    y_train: pd.DataFrame
+    Dataset de salida de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset de salida de prueba
+
+    Returns
+    -----------
+    Ninguno
+    """
     clf = RandomForestClassifier(n_estimators=300,min_samples_leaf=0.15)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
@@ -126,7 +189,22 @@ def random_forest(X_train, X_test, y_train, y_test):
     plt.xlabel('False Positive Rate')
     plt.show()
 
-def compare_models_by_precision(X_train, y_train):
+def compare_models_by_precision(X_train: pd.DataFrame, y_train: pd.DataFrame) -> None:
+    """
+    Esta función es la encargada de comparar los modelos de entrenamiento con la metrica de precision
+    
+    Parámetros
+    -----------
+    X_train: pd.DataFrame
+    Dataset de entrenamiento
+
+    y_train: pd.DataFrame
+    Dataset de salida de entrenamiento
+
+    Returns
+    -----------
+    Ninguno
+    """
     modelos_test = [SVC(kernel='linear',C =100),
           RandomForestClassifier(n_estimators=300,random_state=40),
           KNeighborsClassifier(), 
@@ -150,156 +228,40 @@ def compare_models_by_precision(X_train, y_train):
     plt.grid(visible=True)
     plt.show()
 
-def compare_models(dataset):
-    # Take the first 5 features. We could avoid this by using a two-dim dataset
-    X =  dataset[['thalachh','cp']].values
-    #X =  dataset[['thalach','cp','slp','exng','oldpeak','caa','thall']].values
-    #X =  dataset[['thalachh','cp','slp','exng','oldpeak']].values
-    y = dataset['output']
+def compare_models(dataset: pd.DataFrame) -> None:
+    """
+    Esta función es la encargada de comparar el modelo de regression lineal junto al de svm
 
-    n_classes = 2
+    Parámetros
+    -----------
+    dataset: pd.DataFrame
+    Dataset de entrenamiento
+
+    Returns
+    -----------
+    Ninguno
+    """
+    X =  dataset[['thalachh','cp']].values
+    y = dataset['output']
         
     fig, sub = plt.subplots(1, 2, figsize=(16,6))
     sub[0].scatter(X[:,0], y, c=y, cmap=plt.cm.coolwarm, edgecolors='k')
     sub[1].scatter(X[:,1], y, c=y, cmap=plt.cm.coolwarm, edgecolors='k')
 
-
     particions = [0.5, 0.7, 0.8]
 
     for part in particions:
-        x_t, x_v, y_t, y_v = train_test_split(X, y, train_size=part)
+        x_t, x_v, y_t, y_v = split_data(X, y, part)
         
         #Creacion del regresor logistico 
         logireg = LogisticRegression(C=2.0, fit_intercept=True, penalty='l2', tol=0.001)
-
-        # Entrenamiento
         logireg.fit(x_t, y_t)
-
         print ("Correct classification Logistic ", part, "% of the data: ", logireg.score(x_v, y_v))
         
         #Utilizacion de máquinas de vectores de soporte
         svc = svm.SVC(C=10.0, kernel='rbf', gamma=0.9, probability=True)
-
-        # Entrenamiento 
         svc.fit(x_t, y_t)
-        probs = svc.predict_proba(x_v)
         print ("Correct classification SVM      ", part, "% of the data: ", svc.score(x_v, y_v))
-
-    plt.show()
-
-
-def generate_precision_recall(X, y, n_classes: int, probs: np.array, y_v):
-
-    precision = {}
-    recall = {}
-    average_precision = {}
-    plt.figure()
-    for i in range(n_classes):
-        precision[i], recall[i], _ = precision_recall_curve(y_v == i, probs[:, i])
-        average_precision[i] = average_precision_score(y_v == i, probs[:, i])
-
-        plt.plot(recall[i], precision[i],
-        label='Precision-recall curve of class {0} (area = {1:0.2f})'
-                            ''.format(i, average_precision[i]))
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-        plt.legend(loc="upper right")
-        plt.title('Precision-Recall curve')
-    plt.show()
-
-def generate_roc_curve(n_classes: int, probs: np.array, y_v):
-    # Compute ROC curve and ROC area for each class
-    fpr = {}
-    tpr = {}
-    roc_auc = {}
-    for i in range(n_classes):
-        fpr[i], tpr[i], _ = roc_curve(y_v == i, probs[:, i])
-        roc_auc[i] = auc(fpr[i], tpr[i])
-
-    # Compute micro-average ROC curve and ROC area
-    # Plot ROC curve
-    plt.figure()
-    for i in range(n_classes):
-        plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})' ''.format(i, roc_auc[i]))
-    plt.legend()
-    plt.show()
-
-def make_meshgrid(x, y, h=.02):
-    """
-    Create a mesh of points to plot in
-
-    Parameters
-    ----------
-    x: data to base x-axis meshgrid on
-    y: data to base y-axis meshgrid on
-    h: stepsize for meshgrid, optional
-
-    Returns
-    -------
-    xx, yy : ndarray
-    """
-    x_min, x_max = x.min() - 1, x.max() + 1
-    y_min, y_max = y.min() - 1, y.max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-    return xx, yy
-
-
-def plot_contours(ax, clf, xx, yy, **params):
-    """
-    Plot the decision boundaries for a classifier.
-
-    Parameters
-    ----------
-    ax: matplotlib axes object
-    clf: a classifier
-    xx: meshgrid ndarray
-    yy: meshgrid ndarray
-    params: dictionary of params to pass to contourf, optional
-    """
-    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-    out = ax.contourf(xx, yy, Z, **params)
-    return out
-
-def show_C_effect(C=1.0, gamma=0.7, degree=3):
-    # Take the first two features. We could avoid this by using a two-dim dataset
-    X = data[:, :2]
-    y = dataset['output']
-
-    # we create an instance of SVM and fit out data. We do not scale our
-    # data since we want to plot the support vectors
-    # title for the plots
-    titles = ('SVC with linear kernel',
-              'LinearSVC (linear kernel)',
-              'SVC with RBF kernel',
-              'SVC with polynomial (degree 3) kernel')
-
-    #C = 1.0  # SVM regularization parameter
-    models = (svm.SVC(kernel='linear', C=C),
-              svm.LinearSVC(C=C, max_iter=1000000),
-              svm.SVC(kernel='rbf', gamma=gamma, C=C),
-              svm.SVC(kernel='poly', degree=degree, gamma='auto', C=C))
-    models = (clf.fit(X, y) for clf in models)
-
-    plt.close('all')
-    fig, sub = plt.subplots(2, 2, figsize=(14,9))
-    plt.subplots_adjust(wspace=0.4, hspace=0.4)
-
-    X0, X1= X[:, 0], X[:, 1]
-    xx, yy = make_meshgrid(X0, X1)
-
-    for clf, title, ax in zip(models, titles, sub.flatten()):
-        plot_contours(ax, clf, xx, yy,
-                      cmap=plt.cm.coolwarm, alpha=0.8)
-        ax.scatter(X0, X1, c=y, cmap=plt.cm.coolwarm, s=20, edgecolors='k')
-        ax.set_xlim(xx.min(), xx.max())
-        ax.set_ylim(yy.min(), yy.max())
-        ax.set_xlabel('Frecuencia cardíaca máxima alcanzada')
-        ax.set_ylabel('Tipo de dolor en el pecho')
-        ax.set_xticks(())
-        ax.set_yticks(())
-        ax.set_title(title)
 
     plt.show()
 
@@ -446,7 +408,19 @@ def dataset_graphics(dataset: pd.DataFrame) -> None:
     sns.heatmap(correlacion,annot=True,cmap="coolwarm")
     plt.show()
 
-def dataset_atipic_values(dataset):
+def dataset_atipic_values(dataset: pd.DataFrame) -> None:
+    """
+    Función que muestra la distribucion de los valores atípicos en el dataset
+
+    Parameters
+    -----------
+    dataset: pd.DataFrame
+    Dataset con los datos
+    
+    Returns
+    --------
+    Ninguno
+    """
     fig, ax = plt.subplots(ncols = 7, nrows = 2, figsize = (20, 10))
     index = 0
     ax = ax.flatten()
@@ -458,10 +432,34 @@ def dataset_atipic_values(dataset):
     plt.title("Distribución de los valores atípicos")
     plt.show()
 
-def normalization(dataset):
+def normalization(dataset: pd.DataFrame) -> None:
+    """
+    funcion que nonraliza los datos
+
+    Parameters
+    -----------
+    dataset: pd.DataFrame
+    Dataset con los datos
+
+    Returns
+    --------
+    Ninguno
+    """
     dataset.apply(lambda x: (x-x.mean())/ x.std(), axis=0)
 
-def add_category_values(dataset):
+def add_category_values(dataset: pd.DataFrame) -> None:
+    """
+    Función que agrega al dataset la clase que pertenece cada valore categorico
+
+    Parameters
+    -----------
+    dataset: pd.DataFrame
+    Dataset con los datos
+
+    Returns
+    --------
+    Ninguno
+    """
     dataset.drop(['sex', 'chol', 'restecg', 'fbs'], axis=1, inplace=True)
     #CP: type of chest pain 
     dataset.loc[dataset['cp'] == 0, 'cp'] = 'typical angina'
@@ -481,7 +479,19 @@ def add_category_values(dataset):
     dataset.loc[dataset['thall'] == 2, 'thall'] = 'normal blood flow'
     dataset.loc[dataset['thall'] == 3, 'thall'] = 'reversible defect'
 
-def one_hot_encoding(dataset):
+def one_hot_encoding(dataset: pd.DataFrame) -> None:
+    """
+    Función que codifica los valores categóricos con one hot encoding
+
+    Parameters
+    -----------
+    dataset: pd.DataFrame
+    Dataset con los datos
+
+    Returns
+    --------
+    Ninguno
+    """
     X=dataset.iloc[:, :-1]
     y=dataset.iloc[:, -1]
     x_train, x_test, y_train, y_test = split_data(X, y, 0.9)
@@ -499,7 +509,36 @@ def one_hot_encoding(dataset):
     x_test_en = pd.concat([x_test_num, x_test_encoded], axis=1)
     print(x_train_en.head())
 
-def train_model(model, X_train, X_test, y_train, y_test, model_name):
+def train_model(model: Any, X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame, model_name: str) -> tuple[Any, dict[str, Any], float]:
+    """
+    Función que entrena el modelo, muestra metricas de este y su matrix de confusion
+
+    Parameters
+    -----------
+    model: Any
+    Modelo a entrenar
+
+    X_train: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset con los datos de prueba
+
+    y_train: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset con los datos de salida de prueba
+
+    model_name: str
+    Nombre del modelo
+
+    Returns
+    --------
+    Any: modelo entrenado
+    dict[str, Any]: nombre del modelo y su accuracy
+    float: accuracy del modelo
+    """
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     valor={"Modelo":model_name,"Precision":accuracy_score(y_test, y_pred)}
@@ -510,9 +549,31 @@ def train_model(model, X_train, X_test, y_train, y_test, model_name):
     cm_rl=confusion_matrix(y_test, y_pred)
     sns.heatmap(cm_rl/np.sum(cm_rl),annot = True, fmt=  '0.2%',cmap ='Purples')
     plt.show()
+
     return model, valor, y_pred
 
-def statics_model_regression_logistic(X_train, X_test, y_train, y_test):
+def statics_model_regression_logistic(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame) -> None:
+    """
+    Función que muestra las estadisticas de un modelo de regresión logística
+
+    Parameters
+    -----------
+    X_train: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset con los datos de prueba
+
+    y_train: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset con los datos de salida de prueba
+
+    Returns
+    --------
+    Ninguno
+    """
     modelos_rl = pd.DataFrame(columns=["Modelo","Precision","C","fit_intercept","penalty","tol"])
     c_list=[0.001,0.01,0.1,1.0,2.0]
     f_inter=[False,True]
@@ -531,7 +592,31 @@ def statics_model_regression_logistic(X_train, X_test, y_train, y_test):
     
     print(modelos_rl.sort_values(by="Precision", ascending=False))
 
-def statics_model_smv(X_train, X_test, y_train, y_test, kernel):
+def statics_model_smv(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame, kernel: str) -> None:
+    """
+    Función que muestra las estadisticas de un modelo SVM
+
+    Parameters
+    -----------
+    X_train: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset con los datos de prueba
+
+    y_train: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset con los datos de salida de prueba
+
+    kernel: str
+    Tipo de kernel para el modelo SVM
+
+    Returns
+    --------
+    Ninguno
+    """
     modelos_svm =pd.DataFrame(columns=["Modelo","Precision","C","probability","gamma","tol"])
     c_list=[0.001,0.01,0.1,1.0,2.0]
     gammas=['scale','auto']
@@ -550,7 +635,28 @@ def statics_model_smv(X_train, X_test, y_train, y_test, kernel):
     
     print(modelos_svm.sort_values(by="Precision", ascending=False))
 
-def statics_model_random_forest(X_train, X_test, y_train, y_test):
+def statics_model_random_forest(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame) -> None:
+    """
+    Función que muestra las estadisticas de un modelo Random Forest
+
+    Parameters
+    -----------
+    X_train: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset con los datos de prueba
+
+    y_train: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset con los datos de prueba
+
+    Returns
+    --------
+    Ninguno
+    """
     modelos_rf=pd.DataFrame(columns=["Modelo","Precision","n_estimators","min_samples_leaf"])
     estimadores=[100,200,300,500]
     min_samples=[0.1,0.15,0.2,0.25,0.3]
@@ -569,7 +675,28 @@ def statics_model_random_forest(X_train, X_test, y_train, y_test):
     
     print(modelos_rf.sort_values(by="Precision", ascending=False))
 
-def statics_model_knn(X_train, X_test, y_train, y_test):
+def statics_model_knn(X_train: pd.DataFrame, X_test: pd.DataFrame, y_train: pd.DataFrame, y_test: pd.DataFrame) -> None:
+    """
+    Función que muestra las estadisticas de un modelo KNN
+
+    Parameters
+    -----------
+    X_train: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    X_test: pd.DataFrame
+    Dataset con los datos de prueba
+
+    y_train: pd.DataFrame
+    Dataset con los datos de salida entrenamiento
+
+    y_test: pd.DataFrame
+    Dataset con los datos de salida de prueba
+
+    Returns
+    --------
+    Ninguno
+    """
     modelos_knn=pd.DataFrame(columns=["Modelo","Precision","n"])
     n=[10,15,20,30,50]
     for i in n:
@@ -587,7 +714,22 @@ def statics_model_knn(X_train, X_test, y_train, y_test):
     
     print(modelos_knn.sort_values(by="Precision", ascending=False))
 
-def k_split(X, y):
+def k_split(X: pd.DataFrame, y: pd.DataFrame) -> KFold:
+    """
+    Función que genera los k folds para el modelo de cross validation
+
+    Parameters
+    -----------
+    X: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    y: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    Returns
+    --------
+    KFold: Objeto que contiene los k folds
+    """
     #Usemos cross_val_score para evaluar una puntuación mediante validación cruzada.
     kf =KFold(n_splits=5, shuffle=True, random_state=42)
     cnt = 1
@@ -598,34 +740,96 @@ def k_split(X, y):
 
     return kf
 
-def rmse(score):
+def rmse(score: float) -> None:
+    """
+    Funcion que muestra el error cuadrático medio
+
+    Parameters
+    ----------
+    score: float
+    Score obtenido en el modelo
+    
+    Returns
+    -------
+    Ninguno
+    """
     rmse = np.sqrt(-score)
     print(f'rmse= {"{:.2f}".format(rmse)}')
 
-def model_estimator(X, y, kf):
+def model_estimator(X: pd.DataFrame, y: pd.DataFrame, kf: KFold, method_scoring) -> None:
+    """
+    Funcion que calcula el mejor ajuste para el random Forest y moostrando el error cuadrático medio por cada estimacion
+
+    Parameters
+    ----------
+    X: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    y: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    kf: KFold
+    Objeto que contiene los k folds
+
+    Returns
+    -------
+    Ninguno
+    """
     #A partir de 250 es un buen estimador !
     estimators = [50, 100, 150, 200, 250]
 
     for count in estimators:
-        score = cross_val_score(ensemble.RandomForestRegressor(n_estimators= count, random_state= 42), X, y, cv= kf, scoring="neg_mean_squared_error")
+        score = cross_val_score(ensemble.RandomForestRegressor(n_estimators= count, random_state= 42), X, y, cv= kf, scoring=method_scoring)
         print(f'For estimators: {count}')
         rmse(score.mean())
 
-def model_fit(X, y, kf):
-    n_estimators = [50, 100, 150, 200, 250, 300]
+def leave_one_out(model_rf: LogisticRegression, X: pd.DataFrame, y: pd.DataFrame, method_score: str, splits: int) -> None:
+    """
+    Funcion que calcula el leave one out del modelos de regresion logistica
 
-    for val in n_estimators:
-        score = cross_val_score(ensemble.RandomForestClassifier(n_estimators= val, random_state= 42), X, y, cv= kf, scoring="accuracy")
-        print(f'Average score({val}): {"{:.3f}".format(score.mean())}')
+    Parameters
+    ----------
+    model_rf: LogisticRegression
+    Modelo de regresión logística
 
-def leave_one_out(model_rf, X, y, method_score, splits):
+    X: pd.DataFrame
+    Dataset con los datos de entrenamiento
+
+    y: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    method_score: str
+    Método de evaluación
+
+    splits: int
+    Número de splits
+
+    Returns
+    -------
+    Ninguno
+    """
     loo = LeaveOneOut()
     loo.get_n_splits(X)
     crossvalidation = KFold(n_splits=splits, random_state=None, shuffle=False)
     scores = cross_val_score(model_rf, X, y, scoring=method_score, cv=crossvalidation, n_jobs=1)
     print("Folds: " + str(len(scores)) + ", MSE: " + str(np.mean(np.abs(scores))))
 
-def evaluate_preds(y_true, y_preds):
+def evaluate_preds(y_true: pd.DataFrame, y_preds: pd.DataFrame) -> None:
+    """
+    Funcion que muestra las metricas de la prediccion del modelo (accuracy, precision, recall, f1)
+
+    Parameters
+    ----------
+    y_true: pd.DataFrame
+    Dataset con los datos de salida de prueba
+
+    y_preds: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    Returns
+    -------
+    Ninguno
+    """
     accuracy = accuracy_score(y_true, y_preds)
     precision = precision_score(y_true, y_preds)
     recall = recall_score(y_true, y_preds)
@@ -635,7 +839,27 @@ def evaluate_preds(y_true, y_preds):
     print(f"recall : {round(recall, 2):.2f}")
     print(f"F1 score {round(f1, 2):.2f}")
 
-def simple_roc_curve(y_test, y_preds, title):
+def simple_roc_curve(y_test: pd.DataFrame, y_preds, title: str) -> None:
+    """
+    Función que genera una curva ROC
+
+    Parameters
+    ----------
+    y_test: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    y_preds: pd.DataFrame
+    Dataset con los datos de predicción
+
+    y_preds:
+
+    title: str
+    Título del gráfico
+
+    Returns
+    -------
+    Ninguno
+    """
     fpr, tpr, threshold = roc_curve(y_test, y_preds)
     plt.plot(fpr, tpr)
     plt.title(title)
@@ -654,19 +878,22 @@ def main():
     X = dataset.drop('output', axis=1)
     y=dataset['output']
     X_train, X_test, y_train, y_test = split_data(X, y, 0.5)
+
     print("=========Regression logistica=========")
     logistic_regression(X_train, X_test, y_train, y_test)
+
     print("=========SVM=========")
     svm_model(X_train, X_test, y_train, y_test)
+
     print("=========Random Forest=========")
     random_forest(X_train, X_test, y_train, y_test)
 
     #comparativa de modelos
     print("=========Comparativa de modelos por precision=========")
     compare_models_by_precision(X_train, y_train)
+
     print("=========Comparativa de modelos por score=========")
     compare_models(dataset)
-    #mIRAR fUNCIONES QUE LUIS NO ESTA USANDO, ESTA EL CODIGO AQUI
 
     # Apartado A
     dataset_norm = copy.deepcopy(dataset)
@@ -750,7 +977,7 @@ def main():
     print(f'Scores para cada fold son: {score}')
     rmse(score.mean())
     #ajuste del modelo
-    model_estimator(X, y, kf)
+    model_estimator(X, y, kf, 'neg_mean_squared_error')
 
     print("=========Evaluamos de la regresion logistica=========")
     score = cross_val_score(LogisticRegression(), X, y, cv= kf, scoring="neg_mean_squared_error")
@@ -762,7 +989,7 @@ def main():
     score = cross_val_score(ensemble.RandomForestClassifier(random_state= 42), X, y, cv= kf, scoring="accuracy")
     print(f'Scores para cada fold son: {score}')
     print(f'Average score: {"{:.2f}".format(score.mean())}')
-    model_fit(X, y, kf)
+    model_estimator(X, y, kf, 'accuracy')
 
     print("=========Evaluacion regression logistia=========")
     score = cross_val_score(LogisticRegression(), X, y, cv= kf, scoring="accuracy")
