@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm, ensemble
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, KFold, cross_val_score, LeaveOneOut
-from sklearn.metrics import confusion_matrix, accuracy_score,precision_score, recall_score, f1_score, accuracy_score, roc_curve, classification_report, auc
+from sklearn.metrics import confusion_matrix, accuracy_score,precision_score, recall_score, f1_score, accuracy_score, roc_curve, classification_report, auc, precision_recall_curve
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
@@ -839,7 +839,7 @@ def evaluate_preds(y_true: pd.DataFrame, y_preds: pd.DataFrame) -> None:
     print(f"recall : {round(recall, 2):.2f}")
     print(f"F1 score {round(f1, 2):.2f}")
 
-def simple_roc_curve(y_test: pd.DataFrame, y_preds, title: str) -> None:
+def simple_roc_curve(y_test: pd.DataFrame, y_preds: pd.DataFrame , title: str) -> None:
     """
     Función que genera una curva ROC
 
@@ -867,6 +867,34 @@ def simple_roc_curve(y_test: pd.DataFrame, y_preds, title: str) -> None:
     plt.ylabel('True positive Rate')
     plt.grid(True)
     plt.show()
+
+def simple_recall_curve(y_test: pd.DataFrame, y_preds: pd.DataFrame, title: str) -> None:
+    """
+    Función que genera una curva Recall
+
+    Parameters
+    ----------
+    y_test: pd.DataFrame
+    Dataset con los datos de salida de entrenamiento
+
+    y_preds: pd.DataFrame
+    Dataset con los datos de predicción
+
+    title: str
+    Título del gráfico
+
+    Returns
+    -------
+    Ninguno
+    """
+    fpr, tpr, threshold = precision_recall_curve(y_test, y_preds)
+    plt.plot(fpr, tpr)
+    plt.title(title)
+    plt.xlabel('False positive Rate')
+    plt.ylabel('True positive Rate')
+    plt.grid(True)
+    plt.show()
+
 
 def main():
     # Apartado B
@@ -1012,12 +1040,43 @@ def main():
     simple_roc_curve(y_test, y_pred_lr, 'ROC curve for Heart disease Logistic R classifier')
     simple_roc_curve(y_test, y_pred_rf, 'ROC curve for Heart disease Random Forest classifier')
 
+    print("=========Recall curve=========")
+    simple_recall_curve(y_test, y_pred_rf, 'Recall curve for Heart disease Random Forest classifier')
+
     print("=========Classificacion report random forest=========")
     target_names = ['Padece de enfermedad', 'No padece de enfermedad']
     print(classification_report(y_test, y_pred_rf, target_names=target_names))
 
     print("=========Classificacion report regression logistica=========")
     print(classification_report(y_test, y_pred_lr, target_names=target_names))
+
+    #hyperparameter search
+    print("=========Hyperparameter search=========")
+    
+    model_RR=RandomForestClassifier()
+    tuned_parameters = {'min_samples_leaf': range(10,100,10), 'n_estimators' : range(10,100,10),'max_features':['auto','sqrt','log2']}
+    RR_model= RandomizedSearchCV(model_RR, tuned_parameters,cv=10,scoring='accuracy',n_iter=20,n_jobs= -1)
+    RR_model.fit(X_train, y_train)
+    print(f'Mejor estimador: ', RR_model.best_params_)
+
+    y_prob = RR_model.predict_proba(X_test)[:,1] 
+    y_pred = np.where(y_prob > 0.5, 1, 0) 
+    print(f'score: ', RR_model.score(X_test, y_pred))
+
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(y_test, y_prob)
+    roc_auc = auc(false_positive_rate, true_positive_rate)
+
+    plt.figure(figsize=(10,10))
+    plt.title('Receiver Operating Characteristic')
+    plt.plot(false_positive_rate,true_positive_rate, color='red',label = 'AUC = %0.2f' % roc_auc)
+    plt.legend(loc = 'lower right')
+    plt.plot([0, 1], [0, 1],linestyle='--')
+    plt.axis('tight')
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    plt.show()
+
+
 
 if __name__ == '__main__':
     main()
